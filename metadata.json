@@ -1,0 +1,6 @@
+{
+  "name": "Group Travel Planner AI",
+  "description": "A smart full-stack travel planner and booking coordinator for group travelers supporting customized accessibility needs, subgroup scheduling splits, consensus voting, and manager analytics dashboards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
