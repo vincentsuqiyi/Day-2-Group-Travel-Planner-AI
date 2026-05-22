@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { supabase, isSupabaseConfigured, getTripFromDb, saveTripToDb } from './lib/supabase';
+import { supabase, isSupabaseConfigured, getTripFromDb, saveTripToDb } from './supabaseClient';
 import { 
   Compass, 
   Map, 
