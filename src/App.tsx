@@ -39,6 +39,53 @@ export default function App() {
   const [activeSubTab, setActiveSubTab] = useState<'itinerary' | 'bookings' | 'exporter'>('itinerary');
   const [trip, setTrip] = useState<TripPlan>(mockTrips[0]);
 
+  // Helper to safely construct URLs for Disqus components avoiding null or security restricted values
+  const getSafeDisqusUrl = (tab: string) => {
+    let base = 'https://day-2-group-travel-planner-ai.vercel.app';
+    try {
+      if (window && window.location && window.location.origin && window.location.origin !== 'null') {
+        base = window.location.origin;
+      }
+    } catch {
+      // Ignored
+    }
+    return `${base}/?trip=${trip.id}&tab=${tab}&role=${currentRole}`;
+  };
+
+  // Swallowing cross-origin third-party script/cookie errors (like Disqus iframe errors) from crashing the dev server preview
+  useEffect(() => {
+    const handleError = (e: ErrorEvent) => {
+      if (
+        !e.message ||
+        e.message.toLowerCase().includes('script error') ||
+        e.message.toLowerCase().includes('disqus') ||
+        e.message.toLowerCase().includes('securityerror')
+      ) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        return true;
+      }
+    };
+    const handleRejection = (e: PromiseRejectionEvent) => {
+      const reason = e.reason?.message || '';
+      if (
+        reason.toLowerCase().includes('script error') ||
+        reason.toLowerCase().includes('disqus') ||
+        reason.toLowerCase().includes('securityerror')
+      ) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        return true;
+      }
+    };
+    window.addEventListener('error', handleError, true);
+    window.addEventListener('unhandledrejection', handleRejection, true);
+    return () => {
+      window.removeEventListener('error', handleError, true);
+      window.removeEventListener('unhandledrejection', handleRejection, true);
+    };
+  }, []);
+
   // Scratchpad state
   const [scratchpadEntries, setScratchpadEntries] = useState<any[]>([]);
   const [newNote, setNewNote] = useState('');
@@ -547,7 +594,7 @@ export default function App() {
                       <CommentCount
                         shortname="https-day-2-group-travel-planner-ai-vercel-app"
                         config={{
-                          url: `${window.location.origin}${window.location.pathname}?trip=${trip.id}&tab=itinerary&role=${currentRole}`,
+                          url: getSafeDisqusUrl('itinerary'),
                           identifier: `trip-planner-${trip.id}-itinerary-${currentRole}`,
                           title: `NomadAI Planner - ${trip.destination || 'Home'} - itinerary (${currentRole})`,
                         }}
@@ -570,7 +617,7 @@ export default function App() {
                       <CommentCount
                         shortname="https-day-2-group-travel-planner-ai-vercel-app"
                         config={{
-                          url: `${window.location.origin}${window.location.pathname}?trip=${trip.id}&tab=bookings&role=${currentRole}`,
+                          url: getSafeDisqusUrl('bookings'),
                           identifier: `trip-planner-${trip.id}-bookings-${currentRole}`,
                           title: `NomadAI Planner - ${trip.destination || 'Home'} - bookings (${currentRole})`,
                         }}
@@ -593,7 +640,7 @@ export default function App() {
                       <CommentCount
                         shortname="https-day-2-group-travel-planner-ai-vercel-app"
                         config={{
-                          url: `${window.location.origin}${window.location.pathname}?trip=${trip.id}&tab=exporter&role=${currentRole}`,
+                          url: getSafeDisqusUrl('exporter'),
                           identifier: `trip-planner-${trip.id}-exporter-${currentRole}`,
                           title: `NomadAI Planner - ${trip.destination || 'Home'} - exporter (${currentRole})`,
                         }}
@@ -642,20 +689,20 @@ export default function App() {
             <div>
               <h3 className="text-sm font-sans font-bold text-stone-900 tracking-tight flex items-center gap-2">
                 <span className="w-2 bg-brand h-2 rounded-full animate-pulse"></span>
-                即時行程討論與評論留言區
+                Real-Time Itinerary Discussions & Comments
               </h3>
               <p className="text-[10px] text-stone-500 font-sans mt-0.5 animate-pulse">
                 Share plans, coordinate logistics, and leave feedback for your group.
               </p>
             </div>
             <div className="text-[9px] font-mono px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-500 font-medium self-start sm:self-center flex items-center gap-1.5">
-              <span>Disqus Live Discussions • Traditional Chinese (Taiwan)</span>
+              <span>Disqus Live Discussions • English Language</span>
               <span className="w-1 h-1 rounded bg-stone-300"></span>
               <span className="text-brand font-bold uppercase">
                 <CommentCount
                   shortname="https-day-2-group-travel-planner-ai-vercel-app"
                   config={{
-                    url: `${window.location.origin}${window.location.pathname}?trip=${trip.id}&tab=${activeSubTab}&role=${currentRole}`,
+                    url: getSafeDisqusUrl(activeSubTab),
                     identifier: `trip-planner-${trip.id}-${activeSubTab}-${currentRole}`,
                     title: `NomadAI Planner - ${trip.destination || 'Home'} - ${activeSubTab} (${currentRole})`
                   }}
@@ -670,10 +717,10 @@ export default function App() {
             <DiscussionEmbed
               shortname="https-day-2-group-travel-planner-ai-vercel-app"
               config={{
-                url: `${window.location.origin}${window.location.pathname}?trip=${trip.id}&tab=${activeSubTab}&role=${currentRole}`,
+                url: getSafeDisqusUrl(activeSubTab),
                 identifier: `trip-planner-${trip.id}-${activeSubTab}-${currentRole}`,
                 title: `NomadAI Planner - ${trip.destination || 'Home'} - ${activeSubTab} (${currentRole})`,
-                language: 'zh_TW'
+                language: 'en'
               }}
             />
           </div>
