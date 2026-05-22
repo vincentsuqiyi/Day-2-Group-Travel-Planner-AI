@@ -603,8 +603,8 @@ export default function App() {
       {/* Bottom Bar: Status */}
       <footer className="mt-12 h-16 border-t border-stone-200 bg-stone-50 px-8 flex flex-col sm:flex-row items-center justify-between text-[10px] font-bold uppercase tracking-widest text-stone-500 gap-2 text-center">
         <div className="flex gap-6">
-          <span className="flex items-center gap-2"><span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span> All Bookings Protected</span>
-          <span className="flex items-center gap-2"><span class="w-1.5 h-1.5 bg-brand rounded-full"></span> Mobility Vehicle Confirmed</span>
+          <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span> All Bookings Protected</span>
+          <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-brand rounded-full"></span> Mobility Vehicle Confirmed</span>
         </div>
         <div className="opacity-70">
           NomadAI Precision Travel — 2FA Verified Connection
