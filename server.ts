@@ -316,6 +316,43 @@ Return only a JSON object matching the requested schema. No conversational prefi
   }
 });
 
+// 3. API: AI Note Rewriting / Polishing
+app.post('/api/rewrite-note', async (req, res) => {
+  const { text } = req.body;
+  if (!text) {
+    return res.status(400).json({ error: 'Missing text content to rewrite' });
+  }
+
+  const fallbackRewritten = `✨ Group Planning Note: ${text} (Polished for team-wide accessibility and clarity)`;
+
+  if (!ai) {
+    return res.json({
+      rewritten: fallbackRewritten,
+      apiKeyNotice: 'Simulated AI rewriter active.'
+    });
+  }
+
+  try {
+    const prompt = `You are a professional travel coordinator. Rewrite the following traveler's draft note to sound polite, structured, clear, and highly professional for a family or group trip itinerary. Keep it relatively concise (1-2 sentences).
+Draft note: "${text}"`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.5-flash',
+      contents: prompt,
+    });
+
+    res.json({
+      rewritten: response.text?.trim() || fallbackRewritten,
+      apiKeyNotice: 'Bespoke AI Note Rewrite processed by Gemini!'
+    });
+  } catch (err) {
+    console.error('Error rewriting draft note:', err);
+    res.json({
+      rewritten: fallbackRewritten,
+    });
+  }
+});
+
 // Setup Vite & App Server
 async function startServer() {
   // Vite middleware for development

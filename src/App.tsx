@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { supabase, isSupabaseConfigured, getTripFromDb, saveTripToDb } from './supabaseClient';
+import { supabase, isSupabaseConfigured, getTripFromDb, saveTripToDb } from './lib/supabase';
 import { 
   Compass, 
   Map, 
@@ -37,6 +37,31 @@ export default function App() {
   const [activeSubTab, setActiveSubTab] = useState<'itinerary' | 'bookings' | 'exporter'>('itinerary');
   const [trip, setTrip] = useState<TripPlan>(mockTrips[0]);
 
+  // Scratchpad state
+  const [scratchpadEntries, setScratchpadEntries] = useState<any[]>([]);
+  const [newNote, setNewNote] = useState('');
+  const [rewriting, setRewriting] = useState(false);
+
+  // Fetch recent scratchpad entries from Supabase "entries" table
+  const fetchRecentEntries = async () => {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      const recent = (
+        await supabase
+          .from("entries")
+          .select("*")
+          .order("created_at", { ascending: false })
+      );
+      if (recent.data) {
+        // filter out trip data if stored under same table with string ID
+        const textEntries = recent.data.filter((entry: any) => entry.text && entry.author);
+        setScratchpadEntries(textEntries);
+      }
+    } catch (err) {
+      console.error('Error fetching recent scratchpad entries:', err);
+    }
+  };
+
   // Load initial data and subscribe to live changes from Supabase
   useEffect(() => {
     let active = true;
@@ -55,6 +80,10 @@ export default function App() {
       } else if (active) {
         console.log('No existing entry found for trip_tokyo_disney_2026. Seeding initial mock data...');
         await saveTripToDb('trip_tokyo_disney_2026', mockTrips[0]);
+      }
+
+      if (active) {
+        fetchRecentEntries();
       }
     }
 
@@ -82,6 +111,11 @@ export default function App() {
                 setTrip(newData);
                 handleTriggerAlert('🔄 Itinerary synced automatically via Supabase realtime channels.');
               }
+            } else {
+              // It is a scratchpad entry change
+              if (active) {
+                fetchRecentEntries();
+              }
             }
           }
         )
@@ -98,6 +132,45 @@ export default function App() {
       }
     };
   }, []);
+
+  // Handle AI rewrite and posting scratchpad note to Supabase table "entries"
+  const handleRewriteAndPost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newNote.trim()) return;
+    setRewriting(true);
+
+    let rewritten = newNote;
+    try {
+      const response = await fetch('/api/rewrite-note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: newNote })
+      });
+      const data = await response.json();
+      if (data.rewritten) {
+        rewritten = data.rewritten;
+      }
+    } catch (e) {
+      rewritten = `✨ Group Note: ${newNote} (Optimized for family clarity)`;
+    }
+
+    try {
+      const userEmail = currentUserEmail || 'Guest';
+      const insertResult = (
+        await supabase
+          .from("entries")
+          .insert({ text: rewritten, author: userEmail })
+      );
+
+      setNewNote('');
+      fetchRecentEntries();
+      handleTriggerAlert('✍️ Polished note inserted into Supabase entries with live broadcast!');
+    } catch (err) {
+      console.error('Error rewriting/posting note:', err);
+    } finally {
+      setRewriting(false);
+    }
+  };
 
   const handleUpdateTrip = async (updatedTrip: TripPlan) => {
     setTrip(updatedTrip);
@@ -385,6 +458,67 @@ export default function App() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Shared Group Scratchpad & Note Rewriter */}
+          <div className="bg-white border border-stone-200 p-5 rounded-[2rem] shadow-sm space-y-4">
+            <div className="text-[10px] font-bold font-sans text-stone-450 uppercase tracking-[0.15em] pb-1 border-b border-stone-150 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 font-bold">
+                <Sparkles className="h-3.5 w-3.5 text-brand" /> 
+                Group live scratchpad
+              </span>
+              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-50 border border-[#C5A059]/35 text-brand font-bold">Supabase Feed</span>
+            </div>
+
+            <form onSubmit={handleRewriteAndPost} className="space-y-3">
+              <textarea
+                value={newNote}
+                onChange={(e) => setNewNote(e.target.value)}
+                placeholder="Type a draft note... e.g. 'dinner at 7 in Shinjuku'"
+                className="w-full h-20 p-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs text-stone-900 focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand placeholder:text-stone-400 font-sans cursor-text"
+                required
+              />
+              <button
+                type="submit"
+                disabled={rewriting || !newNote.trim()}
+                className="w-full py-2 bg-brand text-white hover:opacity-95 disabled:opacity-50 text-[10px] tracking-[0.1em] font-bold uppercase rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                {rewriting ? (
+                  <>
+                    <RefreshCw className="h-3 w-3 animate-spin font-bold" />
+                    <span>Polishing drafts...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3 w-3 font-bold" />
+                    <span>AI Rewrite & Post</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <div className="text-[10px] uppercase tracking-wider font-bold text-stone-400 font-mono">
+                Recent Posts ({scratchpadEntries.length})
+              </div>
+              {scratchpadEntries.length === 0 ? (
+                <p className="text-[10.5px] text-stone-400 italic">No shared notes posted yet. Type a note above to test Supabase realtime sync!</p>
+              ) : (
+                scratchpadEntries.map((entry, idx) => (
+                  <div key={entry.id || idx} className="p-3 bg-stone-50 border border-stone-150 rounded-xl space-y-1">
+                    <div className="flex justify-between items-center text-[9px] font-mono">
+                      <span className="font-bold text-brand uppercase">{entry.author?.split('@')[0]}</span>
+                      <span className="text-stone-400">
+                        {entry.created_at ? new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-stone-700 leading-normal font-sans font-medium italic">
+                      {entry.text}
+                    </p>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </aside>
