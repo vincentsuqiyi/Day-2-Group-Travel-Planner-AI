@@ -4,6 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
+// @ts-ignore
+import { DiscussionEmbed, CommentCount } from 'disqus-react';
 import { supabase, isSupabaseConfigured, getTripFromDb, saveTripToDb } from './lib/supabase';
 import { 
   Compass, 
@@ -533,36 +535,72 @@ export default function App() {
                 <div className="flex gap-1.5">
                   <button
                     onClick={() => setActiveSubTab('itinerary')}
-                    className={`px-4 py-2 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-4 py-2 text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
                       activeSubTab === 'itinerary' 
                         ? 'bg-white text-brand shadow font-bold border border-stone-200/50' 
                         : 'text-stone-500 hover:text-stone-900'
                     }`}
                   >
-                    <Calendar className="h-4 w-4" />
-                    Itinerary Timeline
+                    <Calendar className="h-4 w-4 text-brand" />
+                    <span>Itinerary Timeline</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-stone-50 text-stone-500 border border-stone-200 font-mono font-bold">
+                      <CommentCount
+                        shortname="https-day-2-group-travel-planner-ai-vercel-app"
+                        config={{
+                          url: `${window.location.origin}${window.location.pathname}?trip=${trip.id}&tab=itinerary&role=${currentRole}`,
+                          identifier: `trip-planner-${trip.id}-itinerary-${currentRole}`,
+                          title: `NomadAI Planner - ${trip.destination || 'Home'} - itinerary (${currentRole})`,
+                        }}
+                      >
+                        Comments
+                      </CommentCount>
+                    </span>
                   </button>
                   <button
                     onClick={() => setActiveSubTab('bookings')}
-                    className={`px-4 py-2 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-4 py-2 text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
                       activeSubTab === 'bookings' 
                         ? 'bg-white text-brand shadow font-bold border border-stone-200/50' 
                         : 'text-stone-500 hover:text-stone-900'
                     }`}
                   >
-                    <CreditCard className="h-4 w-4" />
-                    Expense split & Bookings
+                    <CreditCard className="h-4 w-4 text-brand" />
+                    <span>Expense split & Bookings</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-stone-50 text-stone-500 border border-stone-200 font-mono font-bold">
+                      <CommentCount
+                        shortname="https-day-2-group-travel-planner-ai-vercel-app"
+                        config={{
+                          url: `${window.location.origin}${window.location.pathname}?trip=${trip.id}&tab=bookings&role=${currentRole}`,
+                          identifier: `trip-planner-${trip.id}-bookings-${currentRole}`,
+                          title: `NomadAI Planner - ${trip.destination || 'Home'} - bookings (${currentRole})`,
+                        }}
+                      >
+                        Comments
+                      </CommentCount>
+                    </span>
                   </button>
                   <button
                     onClick={() => setActiveSubTab('exporter')}
-                    className={`px-4 py-2 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                    className={`px-4 py-2 text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
                       activeSubTab === 'exporter' 
                         ? 'bg-white text-brand shadow font-bold border border-stone-200/50' 
                         : 'text-stone-500 hover:text-stone-900'
                     }`}
                   >
-                    <FileText className="h-4 w-4" />
-                    Export portfolio (PDF)
+                    <FileText className="h-4 w-4 text-brand" />
+                    <span>Export portfolio (PDF)</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-stone-50 text-stone-500 border border-stone-200 font-mono font-bold">
+                      <CommentCount
+                        shortname="https-day-2-group-travel-planner-ai-vercel-app"
+                        config={{
+                          url: `${window.location.origin}${window.location.pathname}?trip=${trip.id}&tab=exporter&role=${currentRole}`,
+                          identifier: `trip-planner-${trip.id}-exporter-${currentRole}`,
+                          title: `NomadAI Planner - ${trip.destination || 'Home'} - exporter (${currentRole})`,
+                        }}
+                      >
+                        Comments
+                      </CommentCount>
+                    </span>
                   </button>
                 </div>
 
@@ -597,6 +635,49 @@ export default function App() {
             <AdminPanel />
           )}
         </section>
+
+        {/* TripAdvisor & Group Traveler Comments (Disqus) */}
+        <div className="lg:col-span-12 mt-8 bg-white border border-stone-200 p-6 sm:p-8 rounded-[2rem] shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-stone-150">
+            <div>
+              <h3 className="text-sm font-sans font-bold text-stone-900 tracking-tight flex items-center gap-2">
+                <span className="w-2 bg-brand h-2 rounded-full animate-pulse"></span>
+                即時行程討論與評論留言區
+              </h3>
+              <p className="text-[10px] text-stone-500 font-sans mt-0.5 animate-pulse">
+                Share plans, coordinate logistics, and leave feedback for your group.
+              </p>
+            </div>
+            <div className="text-[9px] font-mono px-2.5 py-1 rounded-full bg-stone-50 border border-stone-200 text-stone-500 font-medium self-start sm:self-center flex items-center gap-1.5">
+              <span>Disqus Live Discussions • Traditional Chinese (Taiwan)</span>
+              <span className="w-1 h-1 rounded bg-stone-300"></span>
+              <span className="text-brand font-bold uppercase">
+                <CommentCount
+                  shortname="https-day-2-group-travel-planner-ai-vercel-app"
+                  config={{
+                    url: `${window.location.origin}${window.location.pathname}?trip=${trip.id}&tab=${activeSubTab}&role=${currentRole}`,
+                    identifier: `trip-planner-${trip.id}-${activeSubTab}-${currentRole}`,
+                    title: `NomadAI Planner - ${trip.destination || 'Home'} - ${activeSubTab} (${currentRole})`
+                  }}
+                >
+                  Comments
+                </CommentCount>
+              </span>
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <DiscussionEmbed
+              shortname="https-day-2-group-travel-planner-ai-vercel-app"
+              config={{
+                url: `${window.location.origin}${window.location.pathname}?trip=${trip.id}&tab=${activeSubTab}&role=${currentRole}`,
+                identifier: `trip-planner-${trip.id}-${activeSubTab}-${currentRole}`,
+                title: `NomadAI Planner - ${trip.destination || 'Home'} - ${activeSubTab} (${currentRole})`,
+                language: 'zh_TW'
+              }}
+            />
+          </div>
+        </div>
 
       </main>
 
