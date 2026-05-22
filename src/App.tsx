@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase, isSupabaseConfigured, getTripFromDb, saveTripToDb } from './lib/supabase';
 import { 
   Compass, 
   Map, 
@@ -35,6 +36,73 @@ export default function App() {
   const [currentRole, setCurrentRole] = useState<'Traveler' | 'Admin'>('Traveler');
   const [activeSubTab, setActiveSubTab] = useState<'itinerary' | 'bookings' | 'exporter'>('itinerary');
   const [trip, setTrip] = useState<TripPlan>(mockTrips[0]);
+
+  // Load initial data and subscribe to live changes from Supabase
+  useEffect(() => {
+    let active = true;
+
+    async function initSupabaseData() {
+      if (!isSupabaseConfigured || !supabase) {
+        console.log('Supabase offline fallback config active (matching localStorage fallback pattern).');
+        return;
+      }
+
+      console.log('Fetching initial TripPlan from Supabase "entries" table...');
+      const dbTrip = await getTripFromDb('trip_tokyo_disney_2026');
+      if (dbTrip && active) {
+        setTrip(dbTrip);
+        console.log('Successfully synced trip state from Supabase:', dbTrip);
+      } else if (active) {
+        console.log('No existing entry found for trip_tokyo_disney_2026. Seeding initial mock data...');
+        await saveTripToDb('trip_tokyo_disney_2026', mockTrips[0]);
+      }
+    }
+
+    initSupabaseData();
+
+    // Subscribe to Postgres Changes live
+    let channel: any = null;
+    if (isSupabaseConfigured && supabase) {
+      console.log('Setting up realtime channel on "entries" table...');
+      channel = supabase
+        .channel('entries-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'entries',
+          },
+          (payload) => {
+            console.log('Live Postgres change received:', payload);
+            if (payload.new && (payload.new as any).id === 'trip_tokyo_disney_2026') {
+              const newData = (payload.new as any).data;
+              if (newData && active) {
+                console.log('Updating trip state to match live Postgres payload!');
+                setTrip(newData);
+                handleTriggerAlert('🔄 Itinerary synced automatically via Supabase realtime channels.');
+              }
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log(`Realtime channels status: ${status}`);
+        });
+    }
+
+    return () => {
+      active = false;
+      if (channel && supabase) {
+        supabase.removeChannel(channel);
+        console.log('Removed realtime subscription channel cleanly.');
+      }
+    };
+  }, []);
+
+  const handleUpdateTrip = async (updatedTrip: TripPlan) => {
+    setTrip(updatedTrip);
+    await saveTripToDb(updatedTrip.id, updatedTrip);
+  };
   
   // Custom travel planner parameters for the sidebar generator
   const [targetDestination, setTargetDestination] = useState('Japan (Tokyo & Disneyland)');
@@ -95,7 +163,7 @@ export default function App() {
             severity: 'Warning'
           })) : []
         };
-        setTrip(updatedTrip);
+        handleUpdateTrip(updatedTrip);
         if (data.apiKeyNotice) {
           setApiKeyNotice(data.apiKeyNotice);
         }
@@ -373,7 +441,7 @@ export default function App() {
               {activeSubTab === 'itinerary' && (
                 <ItineraryManager 
                   trip={trip} 
-                  onUpdateTrip={setTrip} 
+                  onUpdateTrip={handleUpdateTrip} 
                   onAlert={handleTriggerAlert} 
                 />
               )}
@@ -381,7 +449,7 @@ export default function App() {
               {activeSubTab === 'bookings' && (
                 <BookingsSplitter 
                   trip={trip} 
-                  onUpdateTrip={setTrip} 
+                  onUpdateTrip={handleUpdateTrip} 
                   onAlert={handleTriggerAlert} 
                 />
               )}
